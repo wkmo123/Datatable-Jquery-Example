@@ -1,0 +1,209 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+@section Estilos{
+    <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet"/>
+     
+    <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" rel="stylesheet" />
+
+    <link href="https://cdn.datatables.net/fixedheader/3.2.3/css/fixedHeader.dataTables.min.css" rel="stylesheet" />
+
+
+   
+    <style>
+        .btn-exportar-excel{
+            background-color: #198754 !important;
+            color: white !important;
+        }
+
+        .btn-exportar-pdf{
+            background-color: #FF4B3E !important;
+            color: white !important;
+        }
+
+        .btn-exportar-print{
+            background-color: #1E3231 !important;
+            color: white !important;
+
+        }
+
+        thead input {
+            width: 100%;
+        }
+    </style>
+
+
+
+}
+
+<div class="card">
+    <div class="card-header">
+        Empleados
+    </div>
+    <div class="card-body">
+        <table id="tb_empleados" class="display" style="width:100%">
+            <thead>
+                <tr>
+                    <th>IdEmpleado</th>
+                    <th>Nombre</th>
+                    <th>Cargo</th>
+                    <th>Oficina</th>
+                    <th>Salario</th>
+                    <th>Telefono</th>
+                    <th>Fecha Ingreso</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+@section Scripts{
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <script src="https://cdn.datatables.net/fixedheader/3.2.3/js/dataTables.fixedHeader.min.js"></script>
+
+
+
+
+
+    <script>
+        $(document).ready(function() {
+
+            $('#tb_empleados thead tr')
+                .clone(true)
+                .addClass('filters')
+                .appendTo('#tb_empleados thead');
+
+            $('#tb_empleados').DataTable({
+                "ajax": {
+                    "url": "@Url.Action("ListaEmpleados","Home")",
+                    "type": "GET",
+                    "datatype": "json"
+                },
+                "columns": [
+                    { "data": "idEmpleado" },
+                    { "data": "nombre" },
+                    { "data": "cargo" },
+                    { "data": "oficina" },
+                    { "data": "salario" },
+                    { "data": "telefono" },
+                    { "data": "fechaIngreso" }
+                ],
+                "language": {
+                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                },
+                columnDefs :[
+                    {
+                        targets : 0 ,
+                        visible : false
+                    }
+                ],
+                dom : "Bfrtip",
+                buttons: [
+                    {
+                        extend: "excelHtml5",
+                        text: "Exportar Excel",
+                        filename: "Reporte de empleados",
+                        title: "",
+                        exportOptions: {
+                            columns:[1,2,3,4,5,6]
+                        },
+                        className: "btn-exportar-excel"
+                    },
+                    {
+                        extend: "pdfHtml5",
+                        text: "Exportar PDF",
+                        filename: "Reporte de empleados",
+                        title: "",
+                        exportOptions: {
+                            columns: [1, 2, 3, 4, 5, 6]
+                        },
+                        className: "btn-exportar-pdf"
+
+                    },
+                    {
+                        extend: "print",
+                        title: "",
+                        exportOptions: {
+                            columns: [1, 2, 3, 4, 5, 6]
+                        },
+                        className: "btn-exportar-print"
+                    },
+                    {
+                        extend: "pageLength",
+                        className: "btn-exportar-print"
+                    },
+                ],
+                orderCellsTop: true,
+                fixedHeader: true,
+                initComplete: function () {
+                    var api = this.api();
+
+                    // For each column
+                    api
+                        .columns()
+                        .eq(0)
+                        .each(function (colIdx) {
+                            // Set the header cell to contain the input element
+                            var cell = $('.filters th').eq(
+                                $(api.column(colIdx).header()).index()
+                            );
+                            var title = $(cell).text();
+                            //$(cell).html('<input type="text" placeholder="' + title + '" />');
+                            $(cell).html('<input type="text" placeholder=" Buscar...." />');
+
+
+                            // On every keypress in this input
+                            $(
+                                'input',
+                                $('.filters th').eq($(api.column(colIdx).header()).index())
+                            )
+                                .off('keyup change')
+                                .on('change', function (e) {
+                                    // Get the search value
+                                    $(this).attr('title', $(this).val());
+                                    var regexr = '({search})'; //$(this).parents('th').find('select').val();
+
+                                    var cursorPosition = this.selectionStart;
+                                    // Search the column for that value
+                                    api
+                                        .column(colIdx)
+                                        .search(
+                                            this.value != ''
+                                                ? regexr.replace('{search}', '(((' + this.value + ')))')
+                                                : '',
+                                            this.value != '',
+                                            this.value == ''
+                                        )
+                                        .draw();
+                                })
+                                .on('keyup', function (e) {
+                                    e.stopPropagation();
+
+                                    $(this).trigger('change');
+                                    $(this)
+                                        .focus()[0]
+                                        .setSelectionRange(cursorPosition, cursorPosition);
+                                });
+                        });
+                }
+                
+             });
+
+        });
+    </script>
+}
